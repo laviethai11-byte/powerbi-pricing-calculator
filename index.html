@@ -1,1 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Power BI project pricing calculator for estimating effort, internal cost, project pricing, and payment milestones." />
+  <title>Power BI Project Estimator</title>
+  <style>
+    :root{
+      --bg:#f5f7fb; --panel:#ffffff; --text:#172033; --muted:#687386;
+      --line:#dfe5ee; --accent:#3157d5; --accent-soft:#eef2ff;
+      --good:#177a55; --shadow:0 8px 30px rgba(30,45,75,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1120px;margin:auto;padding:34px 20px 60px}
+    header{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:24px}
+    h1{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:-1.2px}
+    h2{margin:0 0 5px;font-size:18px}
+    p{margin:6px 0;color:var(--muted);line-height:1.55}
+    .eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+    .badge{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:12px;white-space:nowrap}
+    .layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.75fr);gap:18px;align-items:start}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+    .card+.card{margin-top:18px}
+    .settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+    label{display:block;font-size:12px;font-weight:750;margin-bottom:6px;color:#3f4a5c}
+    input,select{width:100%;min-height:43px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:9px 10px;font:inherit;color:var(--text);outline:none}
+    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    .table{margin-top:15px}
+    .tr{display:grid;grid-template-columns:36px minmax(0,1fr) 90px 118px;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+    .tr.head{padding-top:0;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .tr:last-child{border-bottom:0}
+    .num{width:30px;height:30px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent);font-size:12px;font-weight:800}
+    .task{font-size:13px;font-weight:700}
+    .sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .cost{text-align:right;font-size:12px;font-weight:750}
+    .total{display:flex;justify-content:space-between;gap:15px;border-top:2px solid var(--text);padding-top:14px;margin-top:8px;font-weight:800}
+    .pricegrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:15px}
+    .price{border:1px solid var(--line);border-radius:14px;padding:14px}
+    .price.target{border:2px solid var(--accent);background:var(--accent-soft)}
+    .price span{font-size:11px;color:var(--muted);font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+    .price strong{display:block;font-size:25px;margin-top:3px;letter-spacing:-.5px}
+    .mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .metric{padding:12px;border-radius:12px;background:#f8fafc;border:1px solid var(--line)}
+    .metric small{display:block;color:var(--muted)}
+    .metric b{display:block;margin-top:3px}
+    .payment{display:grid;grid-template-columns:minmax(0,1fr) 48px 105px;gap:8px;padding:11px 0;border-bottom:1px solid var(--line);align-items:center;font-size:12px}
+    .payment:last-child{border-bottom:0}
+    .payment b:last-child{text-align:right}
+    .note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+    button{border:0;border-radius:10px;padding:11px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+    .primary{background:var(--accent);color:#fff}.secondary{background:#eef1f5;color:var(--text)}
+    .status{color:var(--good);font-size:12px;font-weight:700;margin-top:9px;min-height:18px}
+    footer{text-align:center;color:var(--muted);font-size:11px;margin-top:24px}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.settings{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.wrap{padding:22px 12px 40px}header{align-items:flex-start;flex-direction:column}.settings{grid-template-columns:1fr}.tr{grid-template-columns:32px minmax(0,1fr) 76px}.tr .cost,.tr.head .cost{display:none}.card{padding:15px}.total{flex-direction:column}.badge{display:none}}
+    @media print{body{background:#fff}.wrap{max-width:none;padding:0}.card{box-shadow:none;break-inside:avoid}.actions,.badge,.status{display:none}.layout{grid-template-columns:1.45fr .75fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Freelance BI Project Calculator</div>
+      <h1>Power BI Project Estimator</h1>
+      <p>Estimate effort by work package, calculate project pricing, and structure client payment milestones.</p>
+    </div>
+    <div class="badge">Standalone • GitHub Pages ready</div>
+  </header>
+
+  <div class="layout">
+    <main>
+      <section class="card">
+        <h2>Project assumptions</h2>
+        <p>Set the core scope and your internal pricing assumptions.</p>
+        <div class="settings">
+          <div><label for="reports">Power BI reports</label><input id="reports" type="number" min="1" max="100" value="10"></div>
+          <div><label for="reportHours">Hours / report</label><input id="reportHours" type="number" min="1" max="100" value="8"></div>
+          <div><label for="rate">Internal rate (VND/hour)</label><input id="rate" type="number" min="50000" step="10000" value="700000"></div>
+          <div><label for="contingency">Contingency</label><select id="contingency"><option value=".10">10%</option><option value=".15" selected>15%</option><option value=".20">20%</option><option value=".25">25%</option></select></div>
+          <div><label for="position">Pricing position</label><select id="position"><option value=".85">Competitive</option><option value="1" selected>Standard</option><option value="1.2">Premium</option><option value="1.4">Consulting</option></select></div>
+          <div><label for="buffer">Negotiation buffer</label><select id="buffer"><option value=".05">5%</option><option value=".10" selected>10%</option><option value=".15">15%</option><option value=".20">20%</option></select></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Work packages</h2>
+        <p>Adjust hours to match the actual statement of work.</p>
+        <div class="table">
+          <div class="tr head"><div>#</div><div>Milestone / deliverable</div><div>Hours</div><div class="cost">Internal cost</div></div>
+          <div id="workRows"></div>
+        </div>
+        <div class="total"><span>Total estimated effort</span><span id="totalLine">—</span></div>
+      </section>
+
+      <section class="card">
+        <h2>Suggested payment milestones</h2>
+        <p>Keep detailed work packages internally, but use fewer commercial milestones in the contract.</p>
+        <div id="paymentRows"></div>
+      </section>
+    </main>
+
+    <aside>
+      <section class="card">
+        <h2>Recommended project price</h2>
+        <p>Use the target as your starting quotation.</p>
+        <div class="pricegrid">
+          <div class="price"><span>Minimum</span><strong id="minPrice">—</strong></div>
+          <div class="price target"><span>Recommended quote</span><strong id="targetPrice">—</strong></div>
+          <div class="price"><span>Premium</span><strong id="premiumPrice">—</strong></div>
+        </div>
+        <div class="mini">
+          <div class="metric"><small>Total hours</small><b id="totalHours">—</b></div>
+          <div class="metric"><small>Effective rate</small><b id="effectiveRate">—</b></div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="printBtn" type="button">Print / Save PDF</button>
+          <button class="secondary" id="resetBtn" type="button">Reset</button>
+        </div>
+        <div class="status" id="status" aria-live="polite"></div>
+        <div class="note">Pricing formula: estimated effort × internal hourly rate, adjusted for contingency, market position, and negotiation buffer. Treat this as a commercial estimator, not a tax or accounting calculator.</div>
+      </section>
+
+      <section class="card">
+        <h2>Pricing principle</h2>
+        <p><strong>Client:</strong> fixed project price and clear payment milestones.</p>
+        <p><strong>You:</strong> retain the hourly model internally to protect margin and price change requests.</p>
+      </section>
+    </aside>
+  </div>
+  <footer>Power BI Project Estimator • All calculations run locally in the browser.</footer>
+</div>
+
+<script>
+(() => {
+  const milestones = [
+    ["Business requirement analysis", 8, "Scope, users, decisions and reporting needs"],
+    ["KPI definition", 6, "Definitions, calculation logic and acceptance criteria"],
+    ["Data preparation", 16, "Cleaning, transformation and source preparation"],
+    ["Semantic data model", 16, "Relationships, dimensions, facts and model design"],
+    ["DAX measures", 20, "Business measures and calculation logic"],
+    ["Power BI reports", 0, "Calculated as number of reports × hours per report"],
+    ["UAT", 15, "Testing, feedback and agreed revisions"],
+    ["Documentation", 6, "Model, KPI and report documentation"],
+    ["Knowledge transfer", 4, "Handover and user walkthrough"]
+  ];
+  const payments = [
+    ["Kickoff & requirements", 20],
+    ["Data model + DAX", 30],
+    ["Report development", 30],
+    ["UAT + handover", 20]
+  ];
+  const $ = id => document.getElementById(id);
+  const money = n => new Intl.NumberFormat("vi-VN", {maximumFractionDigits:0}).format(Math.round(n)) + " ₫";
+  const val = id => Math.max(0, Number($(id).value) || 0);
+
+  function buildRows(){
+    $("workRows").innerHTML = milestones.map((m,i) => `
+      <div class="tr">
+        <div class="num">${i+1}</div>
+        <div><div class="task">${m[0]}</div><div class="sub">${m[2]}</div></div>
+        <input id="h${i}" aria-label="Hours for ${m[0]}" type="number" min="0" max="1000" value="${m[1]}">
+        <div class="cost" id="c${i}">—</div>
+      </div>`).join("");
+    $("h5").readOnly = true;
+    $("h5").title = "Calculated from reports × hours per report";
+    document.querySelectorAll("#workRows input").forEach(el => el.addEventListener("input", calculate));
+  }
+
+  function calculate(){
+    const reports = Math.max(1, val("reports"));
+    const reportHours = val("reportHours");
+    const rate = val("rate");
+    $("h5").value = reports * reportHours;
+
+    const hours = milestones.map((_,i) => val("h"+i));
+    const total = hours.reduce((a,b) => a+b, 0);
+    hours.forEach((h,i) => $("c"+i).textContent = money(h*rate));
+
+    const internalCost = total * rate;
+    const base = internalCost * (1 + val("contingency")) * val("position");
+    const target = base * (1 + val("buffer"));
+    const minimum = base * .90;
+    const premium = base * 1.25 * (1 + val("buffer"));
+
+    $("totalLine").textContent = `${total.toFixed(0)} hours · ${money(internalCost)}`;
+    $("totalHours").textContent = total.toFixed(0) + " h";
+    $("effectiveRate").textContent = money(target / Math.max(1,total)) + "/h";
+    $("minPrice").textContent = money(minimum);
+    $("targetPrice").textContent = money(target);
+    $("premiumPrice").textContent = money(premium);
+
+    $("paymentRows").innerHTML = payments.map((p,i) => `
+      <div class="payment">
+        <div><b>${i+1}. ${p[0]}</b></div>
+        <b>${p[1]}%</b>
+        <b>${money(target*p[1]/100)}</b>
+      </div>`).join("");
+  }
+
+  function reset(){
+    $("reports").value = 10; $("reportHours").value = 8; $("rate").value = 700000;
+    $("contingency").value = ".15"; $("position").value = "1"; $("buffer").value = ".10";
+    milestones.forEach((m,i) => $("h"+i).value = m[1]);
+    calculate();
+    $("status").textContent = "Example values restored.";
+    setTimeout(() => $("status").textContent = "", 1800);
+  }
+
+  buildRows();
+  ["reports","reportHours","rate","contingency","position","buffer"].forEach(id => $(id).addEventListener("input", calculate));
+  $("resetBtn").addEventListener("click", reset);
+  $("printBtn").addEventListener("click", () => window.print());
+  calculate();
+})();
+</script>
+</body>
+</html>
 
